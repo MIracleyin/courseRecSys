@@ -1,2 +1,7 @@
 dataset/mooc_data
 .idea
+data/__pycache__
+log
+log_tensorboard
+model/__pycache__
+saved
