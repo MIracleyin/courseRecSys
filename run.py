@@ -8,6 +8,7 @@ from recbole.utils import init_logger, get_trainer, init_seed, set_color, get_mo
 from recbole.data import create_dataset
 
 from model import model_name_map
+from data.dataset import GeneralGraphDataset
 
 def run(model=None, dataset='mooc', config_file_list=None, saved=True):
     current_path = os.path.dirname(os.path.realpath(__file__))
@@ -20,7 +21,7 @@ def run(model=None, dataset='mooc', config_file_list=None, saved=True):
 
     config_file_list = [overall_init_file, model_init_file, dataset_init_file]  # env model dataset
 
-    model_class = model_name_map[model_name]
+    model_class = model_name_map.get(model) or model
     config = Config(model=model_class, dataset=dataset, config_file_list=config_file_list)
     init_seed(config['seed'], config['reproducibility'])
 
@@ -31,7 +32,8 @@ def run(model=None, dataset='mooc', config_file_list=None, saved=True):
     logger.info(config)
 
     # dataset filtering
-    dataset = create_dataset(config)
+    # dataset = create_dataset(config)
+    dataset = GeneralGraphDataset(config)
     logger.info(dataset)
 
     # dataset splitting
@@ -39,7 +41,7 @@ def run(model=None, dataset='mooc', config_file_list=None, saved=True):
 
     # model loading and initialization
     init_seed(config['seed'], config['reproducibility'])
-    model = get_model(config['model'])(config, train_data.dataset).to(config['device'])
+    model = model_class(config, train_data.dataset).to(config['device'])
     logger.info(model)
 
     # trainer loading and initialization

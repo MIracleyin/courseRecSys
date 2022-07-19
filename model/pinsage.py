@@ -7,11 +7,11 @@ import torch.nn.functional as F
 
 from recbole.model.abstract_recommender import GeneralRecommender
 from recbole.model.init import xavier_normal_initialization
-from recbole.model.loss import BPRLoss
+from recbole.model.loss import BPRLoss, EmbLoss
 from recbole.utils import InputType
 from torch_geometric.nn import SAGEConv
+from model.generalgraphrecommender import GeneralGraphRecommender
 
-from model import GeneralGraphRecommender
 
 
 # class WeightedSAGEConv(nn.Module):
@@ -79,10 +79,16 @@ class SAGENet(nn.Module):
             in_channels = in_channels if i == 0 else hidden_channels
             self.convs.append(SAGEConv(in_channels, hidden_channels))
 
-    def forward(self, x, adjs):
-        for i, (edge_index, _, size) in enumerate(adjs):
-            x_target = x[:size[1]]
-            x = self.convs[i]((x, x_target), edge_index)
+    def forward(self, x, edge_index):
+        # for i, (edge_index, _, size) in enumerate(adjs):
+        #     x_target = x[:size[1]]
+        #     x = self.convs[i]((x, x_target), edge_index)
+        #     if i != self.num_layers - 1:
+        #         x = x.relu()
+        #         x = F.dropout(x, p=0.5, training=self.training)
+        # return x
+        for i, conv in enumerate(self.convs):
+            x = conv(x, edge_index)
             if i != self.num_layers - 1:
                 x = x.relu()
                 x = F.dropout(x, p=0.5, training=self.training)
@@ -106,13 +112,18 @@ class PinSage(GeneralGraphRecommender):
         # load dataset info
 
         # load parameters info
+        self.embedding_size = config['embedding_size']
         self.hidden_dims = config['hidden_size']
         self.num_layers = config['num_layers']
+        self.reg_weight = config['reg_weight']  # float32 type: the weight decay for l2 normalization
+        self.require_pow = config['require_pow']  # bool type: whether to require pow when regularization
 
         # define layers and loss
         self.user_embedding = nn.Embedding(self.n_users, self.embedding_size)
         self.item_embedding = nn.Embedding(self.n_items, self.embedding_size)
         self.sage_conv = SAGENet(self.embedding_size, self.hidden_dims, self.num_layers)
+        self.mf_loss = BPRLoss()
+        self.reg_loss = EmbLoss()
 
         # storage variables for full sort evaluation acceleration
         self.restore_user_e = None
@@ -136,8 +147,8 @@ class PinSage(GeneralGraphRecommender):
         all_embeddings = self.get_ego_embeddings()
         embeddings_list = [all_embeddings]
 
-        for layer_idx in range(self.n_layers):
-            all_embeddings = self.sage_conv(all_embeddings, self.edge_index, self.edge_weight)
+        for layer_idx in range(self.num_layers):
+            all_embeddings = self.sage_conv(all_embeddings, self.edge_index)
             embeddings_list.append(all_embeddings)
         sage_all_embeddings = torch.stack(embeddings_list, dim=1)
         sage_all_embeddings = torch.mean(sage_all_embeddings, dim=1)

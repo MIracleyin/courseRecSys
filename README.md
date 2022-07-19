@@ -15,3 +15,9 @@ test result: OrderedDict([('recall@10', 0.4004), ('mrr@10', 0.2424), ('ndcg@10',
 test result: OrderedDict([('recall@10', 0.4535), ('mrr@10', 0.2505), ('ndcg@10', 0.2983), ('hit@10', 0.4535), ('precision@10', 0.0454)])
 
 ### pinsage
+test result: OrderedDict([('recall@10', 0.3344), ('mrr@10', 0.1895), ('ndcg@10', 0.2225), ('hit@10', 0.338), ('precision@10', 0.0342)])
+test result: OrderedDict([('recall@10', 0.3498), ('mrr@10', 0.1932), ('ndcg@10', 0.2293), ('hit@10', 0.3531), ('precision@10', 0.0356)])
+test result: OrderedDict([('recall@10', 0.35), ('mrr@10', 0.1932), ('ndcg@10', 0.2294), ('hit@10', 0.3534), ('precision@10', 0.0356)])
+test result: OrderedDict([('recall@10', 0.3498), ('mrr@10', 0.1932), ('ndcg@10', 0.2293), ('hit@10', 0.3531), ('precision@10', 0.0356)])
+
+### TP-GNN
