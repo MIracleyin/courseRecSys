@@ -7,7 +7,7 @@ from recbole.data import data_preparation, save_split_dataloaders
 from recbole.utils import init_logger, get_trainer, init_seed, set_color, get_model
 from recbole.data import create_dataset
 
-from model import *
+from model import model_name_map
 
 def run(model=None, dataset='mooc', config_file_list=None, saved=True):
     current_path = os.path.dirname(os.path.realpath(__file__))
@@ -20,7 +20,8 @@ def run(model=None, dataset='mooc', config_file_list=None, saved=True):
 
     config_file_list = [overall_init_file, model_init_file, dataset_init_file]  # env model dataset
 
-    config = Config(model=model_name, dataset=dataset, config_file_list=config_file_list)
+    model_class = model_name_map[model_name]
+    config = Config(model=model_class, dataset=dataset, config_file_list=config_file_list)
     init_seed(config['seed'], config['reproducibility'])
 
     # logger initialization
