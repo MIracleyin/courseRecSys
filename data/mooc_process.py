@@ -102,7 +102,8 @@ class MOOCProcess(BaseDataset):
         self.sep = ","
         self.inter_fields = {0: 'stu_id:token',
                              1: 'course_id:token',
-                             2: 'timestamp:float'}  # useful col
+                             2: 'category:token',
+                             3: 'timestamp:float'}  # useful col
 
         self.output_inter_file = self._get_output_files()
 
@@ -112,8 +113,10 @@ class MOOCProcess(BaseDataset):
 
     def load_inter_data(self):
         origin_data = pd.read_csv(self.inter_file, delimiter=self.sep, engine='python', encoding='gb18030')
-        origin_data = origin_data.iloc[:, [0, 2, 1]]  # get stu_id course_id timestamp
-        origin_data.iloc[:, 2] = origin_data.iloc[:, 2].apply(lambda x: pd.Timestamp(x).to_julian_date())
+        origin_data = origin_data.dropna()
+        origin_data = origin_data.iloc[:, [0, 2, 5, 1]]  # get stu_id course_id timestamp
+        origin_data.iloc[:, 2] = origin_data.iloc[:, 2].apply(lambda x: int(x))
+        origin_data.iloc[:, 3] = origin_data.iloc[:, 3].apply(lambda x: pd.Timestamp(x).to_julian_date())
         return origin_data
 
 if __name__ == '__main__':

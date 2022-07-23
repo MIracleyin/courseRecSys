@@ -31,14 +31,14 @@ require_pow: False
 
 # evaluation settings
 eval_args:
-  split: {'RS':[0.8,0.1,0.1]}
+  split: { 'RS': [ 0.8,0.1,0.1 ] }
   group_by: user
   order: RO
   mode: full
 repeatable: False
-metrics: ["Recall","MRR","NDCG","Hit","Precision"]
-topk: [10]
-valid_metric: MRR@10
+metrics: [ "Recall","NDCG"]
+topk: [ 5,10, 15, 20 ]
+valid_metric: Recall@10
 valid_metric_bigger: True
 eval_batch_size: 111111111111
 metric_decimal_place: 4

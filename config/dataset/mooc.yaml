@@ -4,4 +4,4 @@
 
 
 'load_col':
-  'inter': [stu_id, course_id, timestamp]
+  'inter': [stu_id, course_id, category, timestamp]

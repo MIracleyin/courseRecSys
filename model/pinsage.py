@@ -10,8 +10,8 @@ from recbole.model.init import xavier_normal_initialization
 from recbole.model.loss import BPRLoss, EmbLoss
 from recbole.utils import InputType
 from torch_geometric.nn import SAGEConv
+from torch_geometric.loader import NeighborSampler
 from model.generalgraphrecommender import GeneralGraphRecommender
-
 
 
 # class WeightedSAGEConv(nn.Module):
@@ -95,6 +95,7 @@ class SAGENet(nn.Module):
         return x
 
     def full_forward(self, x, edge_index):
+        self.dataset
         for i, conv in enumerate(self.convs):
             x = conv(x, edge_index)
             if i != self.num_layers - 1:
@@ -110,6 +111,7 @@ class PinSage(GeneralGraphRecommender):
         super(PinSage, self).__init__(config, dataset)
 
         # load dataset info
+        self.sample_edge_index = dataset.get_neighbor_sample_mat(self.edge_index, self.edge_weight)
 
         # load parameters info
         self.embedding_size = config['embedding_size']
@@ -117,6 +119,7 @@ class PinSage(GeneralGraphRecommender):
         self.num_layers = config['num_layers']
         self.reg_weight = config['reg_weight']  # float32 type: the weight decay for l2 normalization
         self.require_pow = config['require_pow']  # bool type: whether to require pow when regularization
+        self.graph_sample = config['graph_sample']
 
         # define layers and loss
         self.user_embedding = nn.Embedding(self.n_users, self.embedding_size)
@@ -132,6 +135,9 @@ class PinSage(GeneralGraphRecommender):
         # parameters initialization
         self.apply(xavier_normal_initialization)
         self.other_parameter_name = ['restore_user_e', 'restore_item_e']
+
+    def get_neighbor_sample(self):
+        return
 
     def get_ego_embeddings(self):
         r"""Get the embedding of users and items and combine to an embedding matrix.
@@ -156,6 +162,27 @@ class PinSage(GeneralGraphRecommender):
         user_all_embeddings, item_all_embeddings = torch.split(sage_all_embeddings, [self.n_users, self.n_items])
         return user_all_embeddings, item_all_embeddings
 
+    def sampled_forward(self, batch_user, batch_pos, batch_neg):
+        all_embeddings = self.get_ego_embeddings()
+        batch = torch.concat([batch_user, batch_pos, batch_neg]).to('cpu')
+
+        embeddings_list = [all_embeddings]
+        for layer_idx in range(self.num_layers):
+            sampled_edge_index = self.sample_edges(batch, 30)
+            all_embeddings = self.sage_conv(all_embeddings, sampled_edge_index)
+            embeddings_list.append(all_embeddings)
+        sage_all_embeddings = torch.stack(embeddings_list, dim=1)
+        sage_all_embeddings = torch.mean(sage_all_embeddings, dim=1)
+
+        user_all_embeddings, item_all_embeddings = torch.split(sage_all_embeddings, [self.n_users, self.n_items])
+        return user_all_embeddings, item_all_embeddings
+
+    def sample_edges(self, batch, num_neighbor, replace=False):
+        adj_t, n_id = self.sample_edge_index.sample_adj(batch, num_neighbor, replace=replace)
+        row, col, _ = adj_t.coo()
+        edge_index = torch.stack([col, row], dim=0).to(self.device)
+        return edge_index
+
     def calculate_loss(self, interaction):
         # clear the storage variable when training
         if self.restore_user_e is not None or self.restore_item_e is not None:
@@ -165,7 +192,11 @@ class PinSage(GeneralGraphRecommender):
         pos_item = interaction[self.ITEM_ID]
         neg_item = interaction[self.NEG_ITEM_ID]
 
-        user_all_embeddings, item_all_embeddings = self.forward()
+        #
+        if not self.graph_sample:
+            user_all_embeddings, item_all_embeddings = self.forward()
+        else:
+            user_all_embeddings, item_all_embeddings = self.sampled_forward(user, pos_item, neg_item)
         u_embeddings = user_all_embeddings[user]
         pos_embeddings = item_all_embeddings[pos_item]
         neg_embeddings = item_all_embeddings[neg_item]

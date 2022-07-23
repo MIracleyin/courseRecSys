@@ -32,8 +32,8 @@ def run(model=None, dataset='mooc', config_file_list=None, saved=True):
     logger.info(config)
 
     # dataset filtering
-    # dataset = create_dataset(config)
-    dataset = GeneralGraphDataset(config)
+    dataset = create_dataset(config) # for only for GRU4Rec
+    # dataset = GeneralGraphDataset(config)
     logger.info(dataset)
 
     # dataset splitting

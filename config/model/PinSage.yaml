@@ -1,5 +1,7 @@
 embedding_size: 64
 hidden_size: 64
-num_layers: 1
+num_layers: 4
 reg_weight: 1e-05
-require_pow: False
+require_pow: True
+num_neighbor: 30
+graph_sample: False
