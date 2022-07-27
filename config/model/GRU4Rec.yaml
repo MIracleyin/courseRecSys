@@ -2,9 +2,12 @@ embedding_size: 64
 hidden_size: 128
 num_layers: 1
 dropout_prob: 0.3
-loss_type: 'CE'
-neg_sampling: ~
+loss_type: 'BPR'
+neg_sampling:
+  uniform: 1
 repeatable: True
-eval_args:
-  order: TO
 eval_batch_size: 4096
+eval_args:
+  split: { 'LS': 'valid_and_test' }
+  order: TO
+  mode: full

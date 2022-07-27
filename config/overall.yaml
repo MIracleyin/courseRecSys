@@ -28,6 +28,7 @@ clip_grad_norm: ~
 weight_decay: 0.0
 loss_decimal_place: 4
 require_pow: False
+MAX_ITEM_LIST_LENGTH: 50
 
 # evaluation settings
 eval_args:
@@ -37,7 +38,7 @@ eval_args:
   mode: full
 repeatable: False
 metrics: [ "Recall","NDCG"]
-topk: [ 5,10, 15, 20 ]
+topk: [ 5, 10, 15, 20 ]
 valid_metric: Recall@10
 valid_metric_bigger: True
 eval_batch_size: 111111111111

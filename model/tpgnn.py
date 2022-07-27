@@ -6,11 +6,12 @@ from recbole.model.init import xavier_normal_initialization
 
 from recbole.model.init import xavier_uniform_initialization
 from recbole.model.loss import BPRLoss, EmbLoss
-from recbole.utils import InputType
+from recbole.utils import InputType, ModelType
 
-from model.generalgraphrecommender import GeneralGraphRecommender
+from model.generalgraphrecommender import GeneralGraphRecommender, SequentialGraphRecommender
 from torch_geometric.utils import dropout_adj
 from torch_geometric.nn import MessagePassing
+
 
 class BiGNNConv(MessagePassing):
     r"""Propagate a layer of Bi-interaction GNN
@@ -37,11 +38,13 @@ class BiGNNConv(MessagePassing):
     def __repr__(self):
         return '{}({},{})'.format(self.__class__.__name__, self.in_channels, self.out_channels)
 
-class TPGNN(GeneralGraphRecommender):
+
+class TPGNN(SequentialGraphRecommender):
     r"""NGCF is a model that incorporate GNN for recommendation.
     We implement the model following the original author with a pairwise training mode.
     """
     input_type = InputType.PAIRWISE
+
 
     def __init__(self, config, dataset):
         super(TPGNN, self).__init__(config, dataset)
@@ -53,6 +56,10 @@ class TPGNN(GeneralGraphRecommender):
         self.node_dropout = config['node_dropout']
         self.message_dropout = config['message_dropout']
         self.reg_weight = config['reg_weight']
+        self.sequential_len = config['sequential_len']
+        self.propagation_dept = config['propagation_depth']
+        self.dropout_prob = config['dropout_prob']
+        assert len(self.hidden_size_list) == self.propagation_dept
 
         # define layers and loss
         self.user_embedding = nn.Embedding(self.n_users, self.embedding_size)
@@ -60,6 +67,10 @@ class TPGNN(GeneralGraphRecommender):
         self.GNNlayers = torch.nn.ModuleList()
         for input_size, output_size in zip(self.hidden_size_list[:-1], self.hidden_size_list[1:]):
             self.GNNlayers.append(BiGNNConv(input_size, output_size))
+        self.emb_dropout = nn.Dropout(self.dropout_prob)
+        self.conv1d = nn.Conv1d(self.embedding_size, self.embedding_size, kernel_size=self.sequential_len)  #
+        self.pooling = nn.MaxPool1d(kernel_size=self.sequential_len)
+
         self.mf_loss = BPRLoss()
         self.reg_loss = EmbLoss()
 
@@ -70,6 +81,12 @@ class TPGNN(GeneralGraphRecommender):
         # parameters initialization
         self.apply(xavier_normal_initialization)
         self.other_parameter_name = ['restore_user_e', 'restore_item_e']
+
+    def gather_indexes(self, output, gather_index):
+        """Gathers the vectors at the specific positions over a minibatch"""
+        gather_index = gather_index.view(-1, 1, 1).expand(-1, -1, output.shape[-1])
+        output_tensor = output.gather(dim=0, index=gather_index)
+        return output_tensor.squeeze(1)
 
     def get_ego_embeddings(self):
         r"""Get the embedding of users and items and combine to an embedding matrix.
@@ -82,30 +99,38 @@ class TPGNN(GeneralGraphRecommender):
         ego_embeddings = torch.cat([user_embeddings, item_embeddings], dim=0)
         return ego_embeddings
 
-    def forward(self):
+    def forward(self, item_seq, item_seq_len):
         if self.node_dropout == 0:
             edge_index, edge_weight = self.edge_index, self.edge_weight
         else:
-            edge_index, edge_weight = dropout_adj(edge_index=self.edge_index, edge_attr=self.edge_weight, p=self.node_dropout)
+            edge_index, edge_weight = dropout_adj(edge_index=self.edge_index, edge_attr=self.edge_weight,
+                                                  p=self.node_dropout)
 
         all_embeddings = self.get_ego_embeddings()
         embeddings_list = [all_embeddings]
         for gnn in self.GNNlayers:
             all_embeddings = gnn(all_embeddings, edge_index, edge_weight)
-            all_embeddings = nn.LeakyReLU(negative_slope=0.2)(all_embeddings)
-            all_embeddings = nn.Dropout(self.message_dropout)(all_embeddings)
-            all_embeddings = F.normalize(all_embeddings, p=2, dim=1)
+            # all_embeddings = nn.LeakyReLU(negative_slope=0.2)(all_embeddings)
+            # all_embeddings = nn.Dropout(self.message_dropout)(all_embeddings)
+            # all_embeddings = F.normalize(all_embeddings, p=2, dim=1)
             embeddings_list += [all_embeddings]  # storage output embedding of each layer
-        ngcf_all_embeddings = torch.cat(embeddings_list, dim=1)
+        gnn_all_embeddings = torch.stack(embeddings_list, dim=1)
+        gnn_all_embeddings = torch.mean(gnn_all_embeddings, dim=1)
 
-        user_all_embeddings, item_all_embeddings = torch.split(ngcf_all_embeddings, [self.n_users, self.n_items])
+        user_all_embeddings, item_all_embeddings = torch.split(gnn_all_embeddings, [self.n_users, self.n_items])
 
-        return user_all_embeddings, item_all_embeddings
+        item_seq_emb = self.item_embedding(item_seq)
+        item_seq_emb_dropout = self.emb_dropout(item_seq_emb)
+        item_seq_emb_dropout = item_seq_emb_dropout.permute(0, 2, 1)
+        item_cnn_output = self.conv1d(item_seq_emb_dropout)
+        item_maxpool_output = self.pooling(item_cnn_output)
+        item_maxpool_output = item_maxpool_output.permute(0, 2, 1) # changback dim
 
+        item_seq_emb_final = self.gather_indexes(item_maxpool_output, item_seq_len -1)
+
+        return user_all_embeddings, item_all_embeddings, item_seq_emb_final
     def sampled_forward(self):
         pass
-
-
 
     def calculate_loss(self, interaction):
         # clear the storage variable when training
@@ -115,8 +140,10 @@ class TPGNN(GeneralGraphRecommender):
         user = interaction[self.USER_ID]
         pos_item = interaction[self.ITEM_ID]
         neg_item = interaction[self.NEG_ITEM_ID]
+        item_seq = interaction[self.ITEM_SEQ]
+        item_seq_len = interaction[self.ITEM_SEQ_LEN]
 
-        user_all_embeddings, item_all_embeddings = self.forward()
+        user_all_embeddings, item_all_embeddings, item_seq_emb = self.forward(item_seq, item_seq_len)
         u_embeddings = user_all_embeddings[user]
         pos_embeddings = item_all_embeddings[pos_item]
         neg_embeddings = item_all_embeddings[neg_item]

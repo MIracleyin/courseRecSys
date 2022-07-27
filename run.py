@@ -8,7 +8,7 @@ from recbole.utils import init_logger, get_trainer, init_seed, set_color, get_mo
 from recbole.data import create_dataset
 
 from model import model_name_map
-from data.dataset import GeneralGraphDataset
+from data.dataset import GeneralGraphDataset, SequentialGraphDataset
 
 def run(model=None, dataset='mooc', config_file_list=None, saved=True):
     current_path = os.path.dirname(os.path.realpath(__file__))
@@ -32,7 +32,8 @@ def run(model=None, dataset='mooc', config_file_list=None, saved=True):
     logger.info(config)
 
     # dataset filtering
-    dataset = create_dataset(config) # for only for GRU4Rec
+    # dataset = create_dataset(config) # only for GRU4Rec
+    dataset = SequentialGraphDataset(config) # for TP-GNN
     # dataset = GeneralGraphDataset(config)
     logger.info(dataset)
 

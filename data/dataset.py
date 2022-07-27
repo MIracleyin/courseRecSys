@@ -183,6 +183,6 @@ class SequentialGraphDataset(RecBoleSeqDataset):
 
     def build(self):
         datasets = super().build()
-        for dataset in datasets:
-            dataset.session_graph_construction()
+        # for dataset in datasets:
+        #     dataset.session_graph_construction()
         return datasets

@@ -1,8 +1,15 @@
+repeatable: True
 embedding_size: 64
-hidden_size_list: [64,64,64]
+hidden_size_list: [64]
 node_dropout: 0.0
+dropout_prob: 0.3
 message_dropout: 0.1
 reg_weight: 1e-5
-seqyebce_len: 7
+sequential_len: 7
 max_neighbors: 30
 propagation_depth: 2
+eval_args:
+  split: { 'LS': 'valid_and_test' }
+  order: TO
+  mode: full
+

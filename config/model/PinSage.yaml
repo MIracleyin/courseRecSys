@@ -3,5 +3,5 @@ hidden_size: 64
 num_layers: 4
 reg_weight: 1e-05
 require_pow: True
-num_neighbor: 30
-graph_sample: False
+num_neighbor: 3000
+graph_sample: True
