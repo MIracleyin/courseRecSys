@@ -35,6 +35,18 @@ test result: OrderedDict([('recall@5', 0.1233), ('recall@10', 0.1873), ('recall@
 num_neighbor: 3000
 test result: OrderedDict([('recall@5', 0.106), ('recall@10', 0.1897), ('recall@15', 0.2235), ('recall@20', 0.2899), ('ndcg@5', 0.0711), ('ndcg@10', 0.0976), ('ndcg@15', 0.1067), ('ndcg@20', 0.1224)])
 
+
+### TP-GNN
+test result: OrderedDict([('recall@5', 0.3291), ('recall@10', 0.4203), ('recall@15', 0.4811), ('recall@20', 0.5261), ('ndcg@5', 0.2601), ('ndcg@10', 0.2895), ('ndcg@15', 0.3057), ('ndcg@20', 0.3164)])
+test result: OrderedDict([('recall@5', 0.0894), ('recall@10', 0.1845), ('recall@15', 0.2587), ('recall@20', 0.2971), ('ndcg@5', 0.057), ('ndcg@10', 0.0864), ('ndcg@15', 0.1061), ('ndcg@20', 0.1151)])
+test result: OrderedDict([('recall@5', 0.0922), ('recall@10', 0.164), ('recall@15', 0.2489), ('recall@20', 0.2887), ('ndcg@5', 0.0583), ('ndcg@10', 0.0813), ('ndcg@15', 0.1038), ('ndcg@20', 0.1132)])
+test result: OrderedDict([('recall@5', 0.0812), ('recall@10', 0.1362), ('recall@15', 0.1708), ('recall@20', 0.2159), ('ndcg@5', 0.0516), ('ndcg@10', 0.0694), ('ndcg@15', 0.0786), ('ndcg@20', 0.0892)])
+
+
+### NGCF
+test result: OrderedDict([('recall@5', 0.3195), ('recall@10', 0.4187), ('recall@15', 0.4859), ('recall@20', 0.5303), ('ndcg@5', 0.2504), ('ndcg@10', 0.2826), ('ndcg@15', 0.3005), ('ndcg@20', 0.3111)])
+
+
 ### LightGCN
 num_layers: 2
 test result: OrderedDict([('recall@5', 0.3565), ('recall@10', 0.4579), ('recall@15', 0.5215), ('recall@20', 0.5647), ('ndcg@5', 0.2812), ('ndcg@10', 0.314), ('ndcg@15', 0.331), ('ndcg@20', 0.3413)])
@@ -47,5 +59,4 @@ test result: OrderedDict([('recall@5', 0.3704), ('recall@10', 0.4712), ('recall@
 num_layers: 6 over-smooth
 test result: OrderedDict([('recall@5', 0.3635), ('recall@10', 0.4608), ('recall@15', 0.5193), ('recall@20', 0.563), ('ndcg@5', 0.2848), ('ndcg@10', 0.3163), ('ndcg@15', 0.3318), ('ndcg@20', 0.3422)])
 
-### TP-GNN
-test result: OrderedDict([('recall@5', 0.3291), ('recall@10', 0.4203), ('recall@15', 0.4811), ('recall@20', 0.5261), ('ndcg@5', 0.2601), ('ndcg@10', 0.2895), ('ndcg@15', 0.3057), ('ndcg@20', 0.3164)])
+

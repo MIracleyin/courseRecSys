@@ -3,7 +3,9 @@ from .bpr import BPR
 from .gru4rec import GRU4Rec
 from .pinsage import PinSage
 from .lightgcn import LightGCN
+from .ngcf import NGCF
 from .tpgnn import TPGNN
+
 
 model_name_map = {
     'Pop': Pop,
@@ -11,7 +13,9 @@ model_name_map = {
     'GRU4Rec': GRU4Rec,
     'PinSage': PinSage,
     'LightGCN': LightGCN,
-    'TPGNN': TPGNN
+    'NGCF': NGCF,
+    'TPGNN': TPGNN,
+
     # 'BPR-T': ExtendedBPR,
     # 'CFA': CFautoencoder,
     # 'DSPR': DeepSimPersionalRec,

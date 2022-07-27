@@ -45,21 +45,25 @@ class TPGNN(SequentialGraphRecommender):
     """
     input_type = InputType.PAIRWISE
 
-
     def __init__(self, config, dataset):
         super(TPGNN, self).__init__(config, dataset)
+
+        # load dataset info
+        self.sample_edge_index = dataset.get_neighbor_sample_mat(self.edge_index, self.edge_weight)
 
         # load parameters info
         self.embedding_size = config['embedding_size']
         self.hidden_size_list = config['hidden_size_list']
         self.hidden_size_list = [self.embedding_size] + self.hidden_size_list
+        self.num_layers = len(self.hidden_size_list)
         self.node_dropout = config['node_dropout']
         self.message_dropout = config['message_dropout']
         self.reg_weight = config['reg_weight']
         self.sequential_len = config['sequential_len']
         self.propagation_dept = config['propagation_depth']
         self.dropout_prob = config['dropout_prob']
-        assert len(self.hidden_size_list) == self.propagation_dept
+        self.graph_sample = config['graph_sample']
+        assert self.num_layers == self.propagation_dept
 
         # define layers and loss
         self.user_embedding = nn.Embedding(self.n_users, self.embedding_size)
@@ -120,17 +124,48 @@ class TPGNN(SequentialGraphRecommender):
         user_all_embeddings, item_all_embeddings = torch.split(gnn_all_embeddings, [self.n_users, self.n_items])
 
         item_seq_emb = self.item_embedding(item_seq)
-        item_seq_emb_dropout = self.emb_dropout(item_seq_emb)
-        item_seq_emb_dropout = item_seq_emb_dropout.permute(0, 2, 1)
-        item_cnn_output = self.conv1d(item_seq_emb_dropout)
-        item_maxpool_output = self.pooling(item_cnn_output)
-        item_maxpool_output = item_maxpool_output.permute(0, 2, 1) # changback dim
+        # item_seq_emb = self.emb_dropout(item_seq_emb)
+        item_seq_emb = item_seq_emb.permute(0, 2, 1)
+        item_seq_emb = self.conv1d(item_seq_emb)
+        item_seq_emb = self.pooling(item_seq_emb)
+        item_seq_emb = item_seq_emb.permute(0, 2, 1)  # changback dim
 
-        item_seq_emb_final = self.gather_indexes(item_maxpool_output, item_seq_len -1)
+        item_seq_emb_final = self.gather_indexes(item_seq_emb, item_seq_len - 1)
 
         return user_all_embeddings, item_all_embeddings, item_seq_emb_final
-    def sampled_forward(self):
-        pass
+
+    def sampled_forward(self, batch_user, batch_pos, batch_neg, item_seq, item_seq_len):
+        all_embeddings = self.get_ego_embeddings()
+        batch = torch.concat([batch_user, batch_pos, batch_neg]).to('cpu')
+
+        embeddings_list = [all_embeddings]
+        for gnn in self.GNNlayers:
+            sampled_edge_index, sampled_edge_weight = self.sample_edges(batch, 30)
+
+            all_embeddings = gnn(all_embeddings, sampled_edge_index, sampled_edge_weight)
+            embeddings_list.append(all_embeddings)
+        gnn_all_embeddings = torch.stack(embeddings_list, dim=1)
+        gnn_all_embeddings = torch.mean(gnn_all_embeddings, dim=1)
+
+        user_all_embeddings, item_all_embeddings = torch.split(gnn_all_embeddings, [self.n_users, self.n_items])
+
+        item_seq_emb = self.item_embedding(item_seq)
+        # item_seq_emb = self.emb_dropout(item_seq_emb)
+        item_seq_emb = item_seq_emb.permute(0, 2, 1)
+        item_seq_emb = self.conv1d(item_seq_emb)
+        item_seq_emb = self.pooling(item_seq_emb)
+        item_seq_emb = item_seq_emb.permute(0, 2, 1)  # changback dim
+
+        item_seq_emb_final = self.gather_indexes(item_seq_emb, item_seq_len - 1)
+
+        return user_all_embeddings, item_all_embeddings, item_seq_emb_final
+
+    def sample_edges(self, batch, num_neighbor, replace=False):
+        adj_t, n_id = self.sample_edge_index.sample_adj(batch, num_neighbor, replace=replace)
+        row, col, data = adj_t.coo()
+        edge_index = torch.stack([col, row], dim=0).to(self.device)
+        edge_weight = data.to(self.device)
+        return edge_index, edge_weight
 
     def calculate_loss(self, interaction):
         # clear the storage variable when training
@@ -143,10 +178,19 @@ class TPGNN(SequentialGraphRecommender):
         item_seq = interaction[self.ITEM_SEQ]
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
 
+        if not self.graph_sample:
+            user_all_embeddings, item_all_embeddings, item_seq_emb = self.forward(item_seq, item_seq_len)
+        else:
+            user_all_embeddings, item_all_embeddings, item_seq_emb = self.sampled_forward(user, pos_item, neg_item,
+                                                                                          item_seq, item_seq_len)
+
         user_all_embeddings, item_all_embeddings, item_seq_emb = self.forward(item_seq, item_seq_len)
         u_embeddings = user_all_embeddings[user]
         pos_embeddings = item_all_embeddings[pos_item]
         neg_embeddings = item_all_embeddings[neg_item]
+
+        pos_embeddings = torch.stack([pos_embeddings, item_seq_emb], dim=1)
+        pos_embeddings = torch.mean(pos_embeddings, dim=1)
 
         pos_scores = torch.mul(u_embeddings, pos_embeddings).sum(dim=1)
         neg_scores = torch.mul(u_embeddings, neg_embeddings).sum(dim=1)
@@ -159,20 +203,33 @@ class TPGNN(SequentialGraphRecommender):
     def predict(self, interaction):
         user = interaction[self.USER_ID]
         item = interaction[self.ITEM_ID]
+        item_seq = interaction[self.ITEM_SEQ]
+        item_seq_len = interaction[self.ITEM_SEQ_LEN]
 
-        user_all_embeddings, item_all_embeddings = self.forward()
+        user_all_embeddings, item_all_embeddings, item_seq_emb = self.forward(item_seq, item_seq_len)
 
         u_embeddings = user_all_embeddings[user]
         i_embeddings = item_all_embeddings[item]
+        i_embeddings = torch.stack([i_embeddings, item_seq_emb], dim=1)
+        i_embeddings = torch.mean(i_embeddings, dim=1)
+
         scores = torch.mul(u_embeddings, i_embeddings).sum(dim=1)
         return scores
 
     def full_sort_predict(self, interaction):
         user = interaction[self.USER_ID]
+        item_seq = interaction[self.ITEM_SEQ]
+        item_seq_len = interaction[self.ITEM_SEQ_LEN]
         if self.restore_user_e is None or self.restore_item_e is None:
-            self.restore_user_e, self.restore_item_e = self.forward()
+            self.restore_user_e, self.restore_item_e, self.item_seq_emb = self.forward(item_seq, item_seq_len)
         # get user embedding from storage variable
         u_embeddings = self.restore_user_e[user]
+        # gather_index = torch.arange(0, self.n_items).to(self.device)
+
+        # self.item_seq_emb = self.gather_indexes(self.item_seq_emb.unsqueeze(1), gather_index)
+        #
+        # self.restore_item_e = torch.stack([self.restore_item_e, self.item_seq_emb], dim=1)
+        # self.restore_item_e = torch.mean(self.restore_item_e, dim=1)
 
         # dot with all item embedding to accelerate
         scores = torch.matmul(u_embeddings, self.restore_item_e.transpose(0, 1))

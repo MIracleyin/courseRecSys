@@ -8,6 +8,8 @@ reg_weight: 1e-5
 sequential_len: 7
 max_neighbors: 30
 propagation_depth: 2
+eval_batch_size: 4096
+graph_sample: False
 eval_args:
   split: { 'LS': 'valid_and_test' }
   order: TO

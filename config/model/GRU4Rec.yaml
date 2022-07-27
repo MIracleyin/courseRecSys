@@ -6,7 +6,7 @@ loss_type: 'BPR'
 neg_sampling:
   uniform: 1
 repeatable: True
-eval_batch_size: 4096
+eval_batch_size: 2048
 eval_args:
   split: { 'LS': 'valid_and_test' }
   order: TO
