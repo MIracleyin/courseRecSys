@@ -107,6 +107,12 @@ test result: OrderedDict([('recall@5', 0.0649), ('recall@10', 0.103), ('recall@1
 ## TPGNN
 best valid : OrderedDict([('recall@5', 0.1062), ('recall@10', 0.2554), ('recall@15', 0.308), ('recall@20', 0.3468), ('ndcg@5', 0.0631), ('ndcg@10', 0.109), ('ndcg@15', 0.1229), ('ndcg@20', 0.1321)])
 test result: OrderedDict([('recall@5', 0.0835), ('recall@10', 0.2022), ('recall@15', 0.2544), ('recall@20', 0.2899), ('ndcg@5', 0.0504), ('ndcg@10', 0.0873), ('ndcg@15', 0.1011), ('ndcg@20', 0.1095)])
+best valid : OrderedDict([('recall@5', 0.1509), ('recall@10', 0.327), ('recall@15', 0.3975), ('recall@20', 0.4446), ('ndcg@5', 0.092), ('ndcg@10', 0.1463), ('ndcg@15', 0.1651), ('ndcg@20', 0.1762)])
+test result: OrderedDict([('recall@5', 0.1435), ('recall@10', 0.2908), ('recall@15', 0.3466), ('recall@20', 0.3904), ('ndcg@5', 0.0822), ('ndcg@10', 0.1284), ('ndcg@15', 0.1432), ('ndcg@20', 0.1535)])
+best valid : OrderedDict([('recall@5', 0.1533), ('recall@10', 0.3293), ('recall@15', 0.394), ('recall@20', 0.4478), ('ndcg@5', 0.0893), ('ndcg@10', 0.1436), ('ndcg@15', 0.1608), ('ndcg@20', 0.1735)])
+test result: OrderedDict([('recall@5', 0.1415), ('recall@10', 0.2937), ('recall@15', 0.3575), ('recall@20', 0.4019), ('ndcg@5', 0.0794), ('ndcg@10', 0.127), ('ndcg@15', 0.1439), ('ndcg@20', 0.1544)])
+best valid : OrderedDict([('recall@5', 0.1477), ('recall@10', 0.3304), ('recall@15', 0.3992), ('recall@20', 0.4532), ('ndcg@5', 0.0886), ('ndcg@10', 0.1449), ('ndcg@15', 0.1631), ('ndcg@20', 0.1759)])
+test result: OrderedDict([('recall@5', 0.1351), ('recall@10', 0.2957), ('recall@15', 0.3585), ('recall@20', 0.4011), ('ndcg@5', 0.0787), ('ndcg@10', 0.1293), ('ndcg@15', 0.1459), ('ndcg@20', 0.156)])
 
 
 ## NGCF
@@ -124,3 +130,4 @@ test result: OrderedDict([('recall@5', 0.2877), ('recall@10', 0.3862), ('recall@
 
 best valid : OrderedDict([('recall@5', 0.3618), ('recall@10', 0.4541), ('recall@15', 0.506), ('recall@20', 0.5447), ('ndcg@5', 0.2438), ('ndcg@10', 0.2739), ('ndcg@15', 0.2877), ('ndcg@20', 0.2969)])
 test result: OrderedDict([('recall@5', 0.3031), ('recall@10', 0.3826), ('recall@15', 0.4322), ('recall@20', 0.4693), ('ndcg@5', 0.214), ('ndcg@10', 0.2398), ('ndcg@15', 0.2529), ('ndcg@20', 0.2618)])
+
