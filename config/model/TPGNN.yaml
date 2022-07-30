@@ -5,7 +5,7 @@ node_dropout: 0.0
 dropout_prob: 0.3
 message_dropout: 0.1
 reg_weight: 1e-5
-sequential_len: 7
+sequential_len: 2 # this import para
 max_neighbors: 30
 propagation_depth: 2
 eval_batch_size: 4096

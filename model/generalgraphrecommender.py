@@ -17,8 +17,13 @@ class SequentialGraphRecommender(GeneralGraphRecommender):
 
     def __init__(self, config, dataset):
         super(SequentialGraphRecommender, self).__init__(config, dataset)
+        self.CATE_ID = config['CATE_FIELD']
         self.ITEM_SEQ = self.ITEM_ID + config['LIST_SUFFIX']
         self.ITEM_SEQ_LEN = config['ITEM_LIST_LENGTH_FIELD']
         self.max_seq_length = config['MAX_ITEM_LIST_LENGTH']
         self.n_items = dataset.num(self.ITEM_ID)
+        self.n_cates = dataset.num(self.CATE_ID)
+
+        self.c_edge_index, self.c_edge_weight = dataset.get_c_norm_adj_mat()
+        self.c_edge_index, self.c_edge_weight = self.c_edge_index.to(self.device), self.c_edge_weight.to(self.device)
 

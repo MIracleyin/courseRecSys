@@ -38,6 +38,32 @@ class BiGNNConv(MessagePassing):
     def __repr__(self):
         return '{}({},{})'.format(self.__class__.__name__, self.in_channels, self.out_channels)
 
+class AttLayer(nn.Module):
+    """Calculate the attention signal(weight) according the input tensor.
+
+    Args:
+        infeatures (torch.FloatTensor): A 3D input tensor with shape of[batch_size, M, embed_dim].
+
+    Returns:
+        torch.FloatTensor: Attention weight of input. shape of [batch_size, M].
+    """
+
+    def __init__(self, in_dim, att_dim):
+        super(AttLayer, self).__init__()
+        self.in_dim = in_dim
+        self.att_dim = att_dim
+        self.w = torch.nn.Linear(in_features=in_dim, out_features=att_dim, bias=False)
+        self.h = nn.Parameter(torch.randn(att_dim), requires_grad=True)
+
+    def forward(self, infeatures):
+        att_signal = self.w(infeatures)  # [batch_size, M, att_dim]
+        att_signal = F.relu(att_signal)  # [batch_size, M, att_dim]
+
+        att_signal = torch.mul(att_signal, self.h)  # [batch_size, M, att_dim]
+        att_signal = torch.sum(att_signal, dim=2)  # [batch_size, M]
+        att_signal = F.softmax(att_signal, dim=1)  # [batch_size, M]
+
+        return att_signal
 
 class TPGNN(SequentialGraphRecommender):
     r"""NGCF is a model that incorporate GNN for recommendation.
@@ -68,13 +94,14 @@ class TPGNN(SequentialGraphRecommender):
         # define layers and loss
         self.user_embedding = nn.Embedding(self.n_users, self.embedding_size)
         self.item_embedding = nn.Embedding(self.n_items, self.embedding_size)
+        self.cate_embedding = nn.Embedding(self.n_cates, self.embedding_size)
         self.GNNlayers = torch.nn.ModuleList()
         for input_size, output_size in zip(self.hidden_size_list[:-1], self.hidden_size_list[1:]):
             self.GNNlayers.append(BiGNNConv(input_size, output_size))
         self.emb_dropout = nn.Dropout(self.dropout_prob)
         self.conv1d = nn.Conv1d(self.embedding_size, self.embedding_size, kernel_size=self.sequential_len)  #
         self.pooling = nn.MaxPool1d(kernel_size=self.sequential_len)
-
+        self.attlayer = AttLayer(self.embedding_size, 64)
         self.mf_loss = BPRLoss()
         self.reg_loss = EmbLoss()
 
@@ -103,9 +130,16 @@ class TPGNN(SequentialGraphRecommender):
         ego_embeddings = torch.cat([user_embeddings, item_embeddings], dim=0)
         return ego_embeddings
 
+    def get_ic_embeddings(self):
+        item_embeddings = self.item_embedding.weight
+        cate_embeddings = self.cate_embedding.weight
+        ic_embeddings = torch.cat([item_embeddings, cate_embeddings], dim=0)
+        return ic_embeddings
+
     def forward(self, item_seq, item_seq_len):
         if self.node_dropout == 0:
             edge_index, edge_weight = self.edge_index, self.edge_weight
+            cedge_index, cedge_weight = self.c_edge_index, self.c_edge_weight
         else:
             edge_index, edge_weight = dropout_adj(edge_index=self.edge_index, edge_attr=self.edge_weight,
                                                   p=self.node_dropout)
@@ -123,16 +157,30 @@ class TPGNN(SequentialGraphRecommender):
 
         user_all_embeddings, item_all_embeddings = torch.split(gnn_all_embeddings, [self.n_users, self.n_items])
 
-        item_seq_emb = self.item_embedding(item_seq)
-        # item_seq_emb = self.emb_dropout(item_seq_emb)
-        item_seq_emb = item_seq_emb.permute(0, 2, 1)
-        item_seq_emb = self.conv1d(item_seq_emb)
-        item_seq_emb = self.pooling(item_seq_emb)
-        item_seq_emb = item_seq_emb.permute(0, 2, 1)  # changback dim
+        ic_embeddings = self.get_ic_embeddings()
+        embeddings_list = [ic_embeddings]
+        for gnn in self.GNNlayers:
+            ic_embeddings = gnn(ic_embeddings, cedge_index, cedge_weight)
+            embeddings_list += [ic_embeddings]
+        ic_gnn_all_embeddings = torch.stack(embeddings_list, dim=1)
+        ic_gnn_all_embeddings = torch.mean(ic_gnn_all_embeddings, dim=1)
+        item_c_all_embeddings, _ = torch.split(ic_gnn_all_embeddings, [self.n_items, self.n_cates])
 
-        item_seq_emb_final = self.gather_indexes(item_seq_emb, item_seq_len - 1)
+        # item_seq_emb = self.item_embedding(item_seq)
+        # # item_seq_emb = self.emb_dropout(item_seq_emb)
+        # item_seq_emb = item_seq_emb.permute(0, 2, 1)
+        # item_seq_emb = self.conv1d(item_seq_emb)
+        # item_seq_emb = self.pooling(item_seq_emb)
+        # item_seq_emb = item_seq_emb.permute(0, 2, 1)  # changback dim
+        #
+        # item_seq_emb_final = self.gather_indexes(item_seq_emb, item_seq_len - 1)
 
-        return user_all_embeddings, item_all_embeddings, item_seq_emb_final
+        item_all_embeddings = torch.stack([item_all_embeddings, item_c_all_embeddings], dim=1)
+        item_all_embeddings = torch.mean(item_all_embeddings, dim=1)
+
+
+
+        return user_all_embeddings, item_all_embeddings#, item_seq_emb_final
 
     def sampled_forward(self, batch_user, batch_pos, batch_neg, item_seq, item_seq_len):
         all_embeddings = self.get_ego_embeddings()
@@ -179,18 +227,20 @@ class TPGNN(SequentialGraphRecommender):
         item_seq_len = interaction[self.ITEM_SEQ_LEN]
 
         if not self.graph_sample:
-            user_all_embeddings, item_all_embeddings, item_seq_emb = self.forward(item_seq, item_seq_len)
+            user_all_embeddings, item_all_embeddings = self.forward(item_seq, item_seq_len)
         else:
             user_all_embeddings, item_all_embeddings, item_seq_emb = self.sampled_forward(user, pos_item, neg_item,
                                                                                           item_seq, item_seq_len)
 
-        user_all_embeddings, item_all_embeddings, item_seq_emb = self.forward(item_seq, item_seq_len)
+        # user_all_embeddings, item_all_embeddings, item_seq_emb = self.forward(item_seq, item_seq_len)
         u_embeddings = user_all_embeddings[user]
         pos_embeddings = item_all_embeddings[pos_item]
         neg_embeddings = item_all_embeddings[neg_item]
 
-        pos_embeddings = torch.stack([pos_embeddings, item_seq_emb], dim=1)
-        pos_embeddings = torch.mean(pos_embeddings, dim=1)
+        # pos_embeddings = torch.stack([pos_embeddings, item_seq_emb], dim=1)
+        # pos_embeddings = torch.mean(pos_embeddings, dim=1)
+
+        # att_signal = self.attlayer(pos_embeddings.unsqueeze(2))
 
         pos_scores = torch.mul(u_embeddings, pos_embeddings).sum(dim=1)
         neg_scores = torch.mul(u_embeddings, neg_embeddings).sum(dim=1)

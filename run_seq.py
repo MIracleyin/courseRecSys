@@ -33,8 +33,8 @@ def run(model=None, dataset='mooc', config_file_list=None, saved=True):
 
     # dataset filtering
     # dataset = create_dataset(config) # only for GRU4Rec
-    # dataset = SequentialGraphDataset(config) # for TP-GNN
-    dataset = GeneralGraphDataset(config) # for other graphmodel
+    dataset = SequentialGraphDataset(config) # for TP-GNN
+    # dataset = GeneralGraphDataset(config) # for other graphmodel
     logger.info(dataset)
 
     # dataset splitting

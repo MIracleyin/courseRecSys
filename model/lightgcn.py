@@ -1,12 +1,3 @@
-r"""
-LightGCN
-################################################
-Reference:
-    Xiangnan He et al. "LightGCN: Simplifying and Powering Graph Convolution Network for Recommendation." in SIGIR 2020.
-
-Reference code:
-    https://github.com/kuandeng/LightGCN
-"""
 
 import numpy as np
 import torch

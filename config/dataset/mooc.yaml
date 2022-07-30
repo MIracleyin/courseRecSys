@@ -1,7 +1,7 @@
 ## dataset arguments
 'USER_ID_FIELD': 'stu_id'
 'ITEM_ID_FIELD': 'course_id'
-
+'CATE_FIELD': 'category'
 
 'load_col':
   'inter': [stu_id, course_id, category, timestamp]
