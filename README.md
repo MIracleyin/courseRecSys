@@ -4,6 +4,32 @@ This repo is benchmark for mooc recommendation systems
 ## Dataset
 ln -s xxx/mooc_data ./dataset/
 
+## Implementation TPGNN
+
+### Seq TP-GNN
+seem bad
+test result: OrderedDict([('recall@5', 0.3291), ('recall@10', 0.4203), ('recall@15', 0.4811), ('recall@20', 0.5261), ('ndcg@5', 0.2601), ('ndcg@10', 0.2895), ('ndcg@15', 0.3057), ('ndcg@20', 0.3164)])
+test result: OrderedDict([('recall@5', 0.0894), ('recall@10', 0.1845), ('recall@15', 0.2587), ('recall@20', 0.2971), ('ndcg@5', 0.057), ('ndcg@10', 0.0864), ('ndcg@15', 0.1061), ('ndcg@20', 0.1151)])
+test result: OrderedDict([('recall@5', 0.0922), ('recall@10', 0.164), ('recall@15', 0.2489), ('recall@20', 0.2887), ('ndcg@5', 0.0583), ('ndcg@10', 0.0813), ('ndcg@15', 0.1038), ('ndcg@20', 0.1132)])
+test result: OrderedDict([('recall@5', 0.0812), ('recall@10', 0.1362), ('recall@15', 0.1708), ('recall@20', 0.2159), ('ndcg@5', 0.0516), ('ndcg@10', 0.0694), ('ndcg@15', 0.0786), ('ndcg@20', 0.0892)])
+test result: OrderedDict([('recall@5', 0.101), ('recall@10', 0.2249), ('recall@15', 0.2822), ('recall@20', 0.3248), ('ndcg@5', 0.0596), ('ndcg@10', 0.0982), ('ndcg@15', 0.1134), ('ndcg@20', 0.1234)])
+
+### Cate TP-GNN
+add cate information remove seq
+aggr add
+best valid : OrderedDict([('recall@5', 0.1477), ('recall@10', 0.3304), ('recall@15', 0.3992), ('recall@20', 0.4532), ('ndcg@5', 0.0886), ('ndcg@10', 0.1449), ('ndcg@15', 0.1631), ('ndcg@20', 0.1759)])
+test result: OrderedDict([('recall@5', 0.1351), ('recall@10', 0.2957), ('recall@15', 0.3585), ('recall@20', 0.4011), ('ndcg@5', 0.0787), ('ndcg@10', 0.1293), ('ndcg@15', 0.1459), ('ndcg@20', 0.156)])
+addr mean
+best valid : OrderedDict([('recall@5', 0.1607), ('recall@10', 0.3251), ('recall@15', 0.3899), ('recall@20', 0.4347), ('ndcg@5', 0.0965), ('ndcg@10', 0.147), ('ndcg@15', 0.1642), ('ndcg@20', 0.1748)])
+test result: OrderedDict([('recall@5', 0.1282), ('recall@10', 0.2828), ('recall@15', 0.3367), ('recall@20', 0.3771), ('ndcg@5', 0.0741), ('ndcg@10', 0.1226), ('ndcg@15', 0.1368), ('ndcg@20', 0.1464)])
+
+### CNN aggr
+best valid : OrderedDict([('recall@5', 0.1255), ('recall@10', 0.2797), ('recall@15', 0.3375), ('recall@20', 0.3807), ('ndcg@5', 0.0734), ('ndcg@10', 0.1219), ('ndcg@15', 0.1372), ('ndcg@20', 0.1474)])
+test result: OrderedDict([('recall@5', 0.0953), ('recall@10', 0.2209), ('recall@15', 0.2845), ('recall@20', 0.3267), ('ndcg@5', 0.0543), ('ndcg@10', 0.0934), ('ndcg@15', 0.1103), ('ndcg@20', 0.1202)])
+
+
+### 
+
 # RO
 ## Baseline
 ### Pop
