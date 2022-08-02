@@ -10,6 +10,8 @@ from recbole.data.dataset import SequentialDataset as RecBoleSeqDataset
 class GeneralGraphDataset(RecBoleDatase):
     def __init__(self, config):
         super(GeneralGraphDataset, self).__init__(config)
+        self.cid_field = config['CATE_FIELD']
+        self.cate_num = self.num(self.cid_field)
 
     @property
     def node_num(self):
@@ -70,6 +72,34 @@ class GeneralGraphDataset(RecBoleDatase):
             col_norm_deg = 1. / torch.sqrt(torch.where(col_deg == 0, torch.ones([1]), col_deg))
 
             edge_weight = row_norm_deg[edge_index[0]] * col_norm_deg[edge_index[1]]
+
+        return edge_index, edge_weight
+
+    def get_c_norm_adj_mat(self):
+        r"""Get the normalized interaction matrix of users and items.
+        Construct the square matrix from the training data and normalize it
+        using the laplace matrix.
+        .. math::
+            A_{hat} = D^{-0.5} \times A \times D^{-0.5}
+        Returns:
+            The normalized interaction matrix in Tensor.
+        """
+
+        row1 = self.inter_feat[self.iid_field]
+        row2 = self.inter_feat[self.iid_field]
+        row = torch.concat([row1, row2])
+        col1 = self.inter_feat[self.uid_field] + self.item_num
+        col2 = self.inter_feat[self.cid_field] + self.item_num + self.user_num
+        col = torch.concat([col1, col2])
+
+        edge_index1 = torch.stack([row, col])
+        edge_index2 = torch.stack([col, row])
+        edge_index = torch.cat([edge_index1, edge_index2], dim=1)
+
+        deg = degree(edge_index[0], self.item_num + self.cate_num + self.user_num)
+
+        norm_deg = 1. / torch.sqrt(torch.where(deg == 0, torch.ones([1]), deg))
+        edge_weight = norm_deg[edge_index[0]] * norm_deg[edge_index[1]]
 
         return edge_index, edge_weight
 

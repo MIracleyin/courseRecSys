@@ -34,7 +34,7 @@ MAX_ITEM_LIST_LENGTH: 50
 eval_args:
   split: { 'RS': [ 0.8,0.1,0.1 ] }
   group_by: user
-  order: LO
+  order: RO
   mode: full
 repeatable: False
 metrics: [ "Recall","NDCG"]

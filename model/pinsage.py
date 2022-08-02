@@ -77,7 +77,7 @@ class SAGENet(nn.Module):
         self.convs = nn.ModuleList()
         for i in range(num_layers):
             in_channels = in_channels if i == 0 else hidden_channels
-            self.convs.append(SAGEConv(in_channels, hidden_channels))
+            self.convs.append(SAGEConv(in_channels, hidden_channels, addr='add'))
 
     def forward(self, x, edge_index):
         # for i, (edge_index, _, size) in enumerate(adjs):
