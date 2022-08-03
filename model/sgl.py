@@ -18,6 +18,11 @@ class SGL(GeneralGraphRecommender):
 
     def __init__(self, config, dataset):
         super(SGL, self).__init__(config, dataset)
+        self.CATE_ID = config['CATE_FIELD']
+        self.n_cates = dataset.num(self.CATE_ID)
+        self.c_edge_index, self.c_edge_weight = dataset.get_sgl_norm_adj_mat()
+        self.c_edge_index, self.c_edge_weight = self.c_edge_index.to(self.device), self.c_edge_weight.to(self.device)
+
 
         # load parameters info
         self.latent_dim = config["embedding_size"]
@@ -31,10 +36,13 @@ class SGL(GeneralGraphRecommender):
         self._user = dataset.inter_feat[dataset.uid_field]
         self._item = dataset.inter_feat[dataset.iid_field]
 
+
         # define layers and loss
         self.user_embedding = torch.nn.Embedding(self.n_users, self.latent_dim)
         self.item_embedding = torch.nn.Embedding(self.n_items, self.latent_dim)
-        self.gcn_conv = LightGCNConv(dim=self.latent_dim)
+        self.cate_embedding = torch.nn.Embedding(self.n_cates, self.latent_dim)
+        self.uigcn_conv = LightGCNConv(dim=self.latent_dim)
+        self.icgcn_conv = LightGCNConv(dim=self.latent_dim)
         self.reg_loss = EmbLoss()
 
         # storage variables for full sort evaluation acceleration
@@ -44,6 +52,8 @@ class SGL(GeneralGraphRecommender):
         # parameters initialization
         self.apply(xavier_uniform_initialization)
         self.other_parameter_name = ['restore_user_e', 'restore_item_e']
+
+
 
     def train(self, mode: bool = True):
         r"""Override train method of base class. The subgraph is reconstructed each time it is called.
@@ -94,22 +104,66 @@ class SGL(GeneralGraphRecommender):
 
         return edge_index.to(self.device), edge_weight.to(self.device)
 
+    def random_icgraph_argue(self):
+        def rand_sample(high, size=None, replace=True):
+            return np.random.choice(np.arange(high), size=size, replace=replace)
+
+        if self.aug_type == "ND":
+            drop_user = rand_sample(self.n_items, size=int(self.n_users * self.drop_ratio), replace=False)
+            drop_item = rand_sample(self.n_cates, size=int(self.n_items * self.drop_ratio), replace=False)
+
+            mask = np.isin(self._user.numpy(), drop_user)
+            mask |= np.isin(self._item.numpy(), drop_item)
+            keep = np.where(~mask)
+
+            row = self._user[keep]
+            col = self._item[keep] + self.n_users
+
+        elif self.aug_type == "ED" or self.aug_type == "RW":
+            keep = rand_sample(len(self._user), size=int(len(self._user) * (1 - self.drop_ratio)), replace=False)
+            row = self._user[keep]
+            col = self._item[keep] + self.n_users
+
+        edge_index1 = torch.stack([row, col])
+        edge_index2 = torch.stack([col, row])
+        edge_index = torch.cat([edge_index1, edge_index2], dim=1)
+
+        deg = degree(edge_index[0], self.n_users + self.n_items)
+        norm_deg = 1. / torch.sqrt(torch.where(deg == 0, torch.ones([1]), deg))
+        edge_weight = norm_deg[edge_index[0]] * norm_deg[edge_index[1]]
+
+        return edge_index.to(self.device), edge_weight.to(self.device)
+
+
     def forward(self, graph=None):
+        edge_index, edge_weight = self.edge_index, self.edge_weight
+        c_edge_index, c_edge_weight = self.c_edge_index, self.c_edge_weight
         all_embeddings = torch.cat([self.user_embedding.weight, self.item_embedding.weight])
+        ic_embeddings = torch.cat([self.item_embedding.weight, self.cate_embedding.weight])
         embeddings_list = [all_embeddings]
+        ic_embeddings_list = [ic_embeddings]
 
         if graph is None:
             for _ in range(self.n_layers):
-                all_embeddings = self.gcn_conv(all_embeddings, self.edge_index, self.edge_weight)
+                all_embeddings = self.uigcn_conv(all_embeddings, edge_index, edge_weight)
+                ic_embeddings = self.icgcn_conv(ic_embeddings, c_edge_index, c_edge_weight)
                 embeddings_list.append(all_embeddings)
+                ic_embeddings_list.append(ic_embeddings)
         else:
             for graph_edge_index, graph_edge_weight in graph:
-                all_embeddings = self.gcn_conv(all_embeddings, graph_edge_index, graph_edge_weight)
+                all_embeddings = self.uigcn_conv(all_embeddings, graph_edge_index, graph_edge_weight)
                 embeddings_list.append(all_embeddings)
 
         embeddings_list = torch.stack(embeddings_list, dim=1)
         embeddings_list = torch.mean(embeddings_list, dim=1, keepdim=False)
+        # ic_embeddings_list = torch.stack(ic_embeddings_list, dim=1)
+        # ic_embeddings_list = torch.mean(ic_embeddings_list, dim=1, keepdim=False)
+
         user_all_embeddings, item_all_embeddings = torch.split(embeddings_list, [self.n_users, self.n_items], dim=0)
+        # item_embeddings, _ = torch.split(ic_embeddings_list, [self.n_items, self.n_cates])
+        #
+        # item_all_embeddings = torch.stack([item_all_embeddings, item_embeddings], dim=1)
+        # item_all_embeddings = torch.mean(item_all_embeddings, dim=1)
 
         return user_all_embeddings, item_all_embeddings
 

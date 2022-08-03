@@ -39,3 +39,11 @@ test result: OrderedDict([('recall@5', 0.3704), ('recall@10', 0.4712), ('recall@
 ## SGL
 best valid : OrderedDict([('recall@5', 0.3687), ('recall@10', 0.469), ('recall@15', 0.5262), ('recall@20', 0.5685), ('ndcg@5', 0.2727), ('ndcg@10', 0.3053), ('ndcg@15', 0.3205), ('ndcg@20', 0.3305)])
 test result: OrderedDict([('recall@5', 0.3768), ('recall@10', 0.474), ('recall@15', 0.5294), ('recall@20', 0.5723), ('ndcg@5', 0.3022), ('ndcg@10', 0.3336), ('ndcg@15', 0.3484), ('ndcg@20', 0.3586)])
+best valid : OrderedDict([('recall@5', 0.334), ('recall@10', 0.4304), ('recall@15', 0.4878), ('recall@20', 0.5302), ('ndcg@5', 0.2473), ('ndcg@10', 0.2784), ('ndcg@15', 0.2938), ('ndcg@20', 0.3038)])
+test result: OrderedDict([('recall@5', 0.3431), ('recall@10', 0.4328), ('recall@15', 0.4892), ('recall@20', 0.5315), ('ndcg@5', 0.2749), ('ndcg@10', 0.3039), ('ndcg@15', 0.3189), ('ndcg@20', 0.329)])
+### category
+best valid : OrderedDict([('recall@5', 0.3616), ('recall@10', 0.4687), ('recall@15', 0.532), ('recall@20', 0.5736), ('ndcg@5', 0.2674), ('ndcg@10', 0.3022), ('ndcg@15', 0.319), ('ndcg@20', 0.3289)])
+test result: OrderedDict([('recall@5', 0.3688), ('recall@10', 0.4726), ('recall@15', 0.5328), ('recall@20', 0.577), ('ndcg@5', 0.2968), ('ndcg@10', 0.3306), ('ndcg@15', 0.3466), ('ndcg@20', 0.357)])
+
+best valid : OrderedDict([('recall@5', 0.3353), ('recall@10', 0.4414), ('recall@15', 0.5036), ('recall@20', 0.5439), ('ndcg@5', 0.2466), ('ndcg@10', 0.2809), ('ndcg@15', 0.2975), ('ndcg@20', 0.3071)])
+test result: OrderedDict([('recall@5', 0.3446), ('recall@10', 0.4459), ('recall@15', 0.5071), ('recall@20', 0.5477), ('ndcg@5', 0.2738), ('ndcg@10', 0.3066), ('ndcg@15', 0.323), ('ndcg@20', 0.3326)])
